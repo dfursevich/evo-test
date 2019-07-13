@@ -1,5 +1,7 @@
 package by.fdf.evolutiongaming
 
+import java.util.UUID
+
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.Directives._
@@ -17,11 +19,9 @@ object TablesServer extends App {
   var tablesService = TablesService()
 
   val route =
-    path("greeter") {
+    path("") {
       get {
-        parameter('name) { userName =>
-          handleWebSocketMessages(tablesService.websocketFlow(userName))
-        }
+        handleWebSocketMessages(tablesService.websocketFlow(UUID.randomUUID().toString))
       }
     }
 

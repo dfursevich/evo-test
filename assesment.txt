@@ -81,9 +81,6 @@ Client sends:
 
 {"$type": "add_table","after_id": 1,"table": {"name": "table - Foo Fighters","participants": 4}}
 
-{"$type": "add_table","afterId": 1, "name": "table - Foo Fighters","participants": 4}
-{"$type": "subscribe_tables"}
-
 (if "after_id" is -1, the table has to be added at the beginning)
 
 Update table
@@ -140,3 +137,9 @@ Table updated
 "participants": 9
 }
 }
+
+{"$type": "subscribe_tables"}
+{"$type": "unsubscribe_tables"}
+{"$type": "add_table","after_id": -1, "name": "table - Foo Fighters","participants": 4}
+{"$type": "ping", "seq": 1}
+{"$type": "login", "username": "admin", "password": "password1234"}

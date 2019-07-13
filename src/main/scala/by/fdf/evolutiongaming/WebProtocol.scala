@@ -1,7 +1,8 @@
 package by.fdf.evolutiongaming
 
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
-import spray.json.{DefaultJsonProtocol, JsObject, JsString, JsValue, RootJsonFormat, _}
+import com.scalapenos.spray.SnakifiedSprayJsonSupport
+import spray.json.{JsObject, JsString, JsValue, RootJsonFormat, _}
 
 /**
  * @author Dzmitry Fursevich
@@ -30,6 +31,8 @@ object WebProtocol {
 
   case class UnsubscribeTables() extends Request
 
+  case class UnsubscribeTablesSuccessful() extends Response
+
   case class NotAuthorized() extends Response
 
   case class AddTable(afterId: Int, name: String, participants: Int) extends Request
@@ -37,6 +40,12 @@ object WebProtocol {
   case class UpdateTable(id: Int, name: String, participants: Int) extends Request
 
   case class RemoveTable(id: Int) extends Request
+
+  case class AddSuccessful(id: Int) extends Response
+
+  case class RemovalSuccessful(id: Int) extends Response
+
+  case class UpdateSuccessful(id: Int) extends Response
 
   case class AddFailed(afterId: Int) extends Response
 
@@ -50,7 +59,7 @@ object WebProtocol {
 
   case class TableRemoved(id: Int) extends Response
 
-  object JsonSupport extends SprayJsonSupport with DefaultJsonProtocol {
+  object JsonSupport extends SprayJsonSupport with SnakifiedSprayJsonSupport {
     implicit val tableFormat = jsonFormat3(Table)
     implicit val loginFormat = jsonFormat2(Login)
     implicit val loginSuccessfulFormat = jsonFormat1(LoginSuccessful)
@@ -70,6 +79,10 @@ object WebProtocol {
     implicit val tableAddedFormat = jsonFormat2(TableAdded)
     implicit val tableUpdatedFormat = jsonFormat1(TableUpdated)
     implicit val tableRemovedFormat = jsonFormat1(TableRemoved)
+    implicit val unsubscribeTablesSuccessfulFormat = jsonFormat0(UnsubscribeTablesSuccessful)
+    implicit val addSuccessfulFormat = jsonFormat1(AddSuccessful)
+    implicit val removalSuccessfulFormat = jsonFormat1(RemovalSuccessful)
+    implicit val updateSuccessfulFormat = jsonFormat1(UpdateSuccessful)
 
     implicit val responseFormat = new RootJsonFormat[Response] {
       override def write(obj: Response): JsValue = JsObject((obj match {
@@ -84,7 +97,11 @@ object WebProtocol {
         case ta: TableAdded => ta.toJson
         case tu: TableUpdated => tu.toJson
         case tr: TableRemoved => tr.toJson
-      }).asJsObject.fields + ("$type" -> JsString(obj.getClass.getSimpleName)))
+        case uts: UnsubscribeTablesSuccessful => uts.toJson
+        case as: AddSuccessful => as.toJson
+        case us: UpdateSuccessful => us.toJson
+        case rs: RemovalSuccessful => rs.toJson
+      }).asJsObject.fields + ("$type" -> JsString(snakify(obj.getClass.getSimpleName))))
 
       override def read(json: JsValue): Response = null
     }

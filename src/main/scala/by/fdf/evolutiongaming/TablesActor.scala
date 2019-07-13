@@ -13,15 +13,15 @@ object TablesActor {
 
   trait TableMessage
 
-  case class SubscribeTablesMessage(user: String, actor: ActorRef) extends TableMessage
+  case class SubscribeTablesMessage(sessionId: String, actor: ActorRef) extends TableMessage
 
-  case class UnsubscribeTablesMessage(user: String) extends TableMessage
+  case class UnsubscribeTablesMessage(sessionId: String) extends TableMessage
 
-  case class AddTableMessage(afterId: Int, name: String, participants: Int, actor: ActorRef) extends TableMessage
+  case class AddTableMessage(afterId: Int, name: String, participants: Int) extends TableMessage
 
-  case class UpdateTableMessage(id: Int, name: String, participants: Int, actor: ActorRef) extends TableMessage
+  case class UpdateTableMessage(id: Int, name: String, participants: Int) extends TableMessage
 
-  case class RemoveTableMessage(id: Int, actor: ActorRef) extends TableMessage
+  case class RemoveTableMessage(id: Int) extends TableMessage
 
 }
 
@@ -32,43 +32,49 @@ class TablesActor extends Actor {
   var ids = (1 to Int.MaxValue).view.iterator
 
   override def receive: Receive = {
-    case AddTableMessage(afterId, name, participants, actor) =>
+    case AddTableMessage(afterId, name, participants) =>
       if (afterId != -1) {
         val idx = tables.indexWhere(_.id == afterId)
         if (idx == -1) {
-          actor ! AddFailed(afterId)
+          sender() ! AddFailed(afterId)
         } else {
-          val table = Table(ids.next(), name, participants)
-          tables.insert(idx + 1, table)
-          broadcast(TableAdded(afterId, table))
+          addTable(name, participants, idx + 1, afterId)
         }
       } else {
-        val table = Table(ids.next(), name, participants)
-        tables.insert(0, table)
-        broadcast(TableAdded(afterId, table))
+        addTable(name, participants, 0, afterId)
       }
-    case UpdateTableMessage(id, name, participants, actor) =>
+    case UpdateTableMessage(id, name, participants) =>
       val idx = tables.indexWhere(_.id == id)
       if (idx == -1) {
-        actor ! UpdateFailed(id)
+        sender() ! UpdateFailed(id)
       } else {
         val table = Table(id, name, participants)
         tables.update(idx, table)
+        sender() ! UpdateSuccessful(table.id)
         broadcast(TableUpdated(table))
       }
-    case RemoveTableMessage(id, actor) =>
+    case RemoveTableMessage(id) =>
       val idx = tables.indexWhere(_.id == id)
       if (idx == -1) {
         sender() ! RemovalFailed(id)
       } else {
         tables.remove(idx)
+        sender() ! RemovalSuccessful(id)
         broadcast(TableRemoved(id))
       }
     case SubscribeTablesMessage(user, actor) =>
       subscribers += user -> actor
-      actor ! TableList(tables.toList)
+      sender() ! TableList(tables.toList)
     case UnsubscribeTablesMessage(user) =>
       subscribers -= user
+      sender() ! UnsubscribeTablesSuccessful()
+  }
+
+  def addTable(name: String, participants: Int, idx: Int, afterId: Int): Unit = {
+    val table = Table(ids.next(), name, participants)
+    tables.insert(idx, table)
+    sender() ! AddSuccessful(table.id)
+    broadcast(TableAdded(afterId, table))
   }
 
   def broadcast(message: Response): Unit = subscribers.values.foreach(_ ! message)
